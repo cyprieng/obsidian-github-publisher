@@ -1,6 +1,6 @@
 .multi-file-suggest-wrapper {
 	position: relative;
-	width: 100%;
+	width: 300px;
 }
 
 .multi-file-suggest-selected {
@@ -9,7 +9,7 @@
 	gap: 4px;
 	align-items: center;
 	margin-top: 4px;
-	max-width: 100%;
+	width: 100%;
 }
 
 .multi-file-chip {
@@ -18,8 +18,7 @@
 	background: var(--background-modifier-active-hover);
 	border-radius: 6px;
 	padding: 2px 6px;
-	font-size: 90%;
-	max-width: 350px;
+	max-width: 250px;
 	margin: 0 4px 4px 0;
 }
 
@@ -36,7 +35,6 @@
 	margin-left: 6px;
 	cursor: pointer;
 	color: var(--text-accent);
-	font-size: 110%;
 }
 
 .multi-file-suggest-input {

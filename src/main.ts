@@ -503,9 +503,7 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 		// Last sync date info
 		if (this.plugin.settings.lastSyncDate) {
 			const info = containerEl.createEl("div");
-			info.style.margin = "0.5em 0 1.5em 0";
 			info.style.textAlign = "right";
-			info.style.fontSize = "0.95em";
 			info.style.opacity = "0.7";
 			info.textContent =
 				"Last synchronization: " +

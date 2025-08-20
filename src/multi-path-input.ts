@@ -110,10 +110,10 @@ export function addMultiPathInput(
 			count++;
 		}
 		if (count === 0) {
-			const nores = suggestDiv.createDiv({
-				cls: "multi-file-suggest-nores",
+			const noResult = suggestDiv.createDiv({
+				cls: "multi-file-suggest-no-result",
 			});
-			nores.setText("No results");
+			noResult.setText("No results");
 		}
 	}
 
