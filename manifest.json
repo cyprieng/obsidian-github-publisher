@@ -3,7 +3,8 @@
 	"name": "GitHub Publisher",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Push selected notes and folders from Obsidian directly to a GitHub repository.",
+	"description": "Push selected notes and folders directly to a GitHub repository.",
 	"author": "cyprieng",
-	"authorUrl": "https://www.cyprien.io"
+	"authorUrl": "https://www.cyprien.io",
+	"isDesktopOnly": false
 }
