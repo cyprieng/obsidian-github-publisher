@@ -7,6 +7,7 @@ import {
 	TFile,
 	TFolder,
 	Notice,
+	normalizePath,
 } from "obsidian";
 import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
 
@@ -62,7 +63,7 @@ export default class GitHubPublisherPlugin extends Plugin {
 
 		// Add a command to the command palette for manual sync
 		this.addCommand({
-			id: "github-publisher-now",
+			id: "publish-now",
 			name: "Publish to GitHub now",
 			callback: () => this.publishToGitHub(),
 		});
@@ -163,7 +164,9 @@ export default class GitHubPublisherPlugin extends Plugin {
 
 			// Gather local files (vaultPath: path in vault, repoPath: path in repo)
 			for (const path of pathsToSync) {
-				const fileOrFolder = this.app.vault.getAbstractFileByPath(path);
+				const fileOrFolder = this.app.vault.getAbstractFileByPath(
+					normalizePath(path),
+				);
 				if (fileOrFolder instanceof TFile) {
 					const content = await this.app.vault.read(fileOrFolder);
 					localFiles.push({
@@ -292,6 +295,7 @@ export default class GitHubPublisherPlugin extends Plugin {
 
 			await this.updateLastSyncDate();
 		} catch (e) {
+			console.error("GitHub Publisher: error during publish", e);
 			new Notice("GitHub Publisher: error during publish : " + e.message);
 		}
 	}
@@ -426,7 +430,7 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 
 		// GitHub token input
 		new Setting(containerEl)
-			.setName("GitHub Token")
+			.setName("GitHub token")
 			.setDesc("Personal token with write access to the repo.")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -487,8 +491,8 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 
 		// Sync interval input
 		new Setting(containerEl)
-			.setName("Sync interval (min)")
-			.setDesc("Every X minutes (0 to disable periodic sync)")
+			.setName("Push interval (min)")
+			.setDesc("Push every X minutes (0 to disable periodic push)")
 			.addText((text) =>
 				text
 					.setValue(String(this.plugin.settings.syncInterval))
@@ -510,9 +514,9 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 
 		// Last sync date info
 		if (this.plugin.settings.lastSyncDate) {
-			const info = containerEl.createEl("div");
-			info.style.textAlign = "right";
-			info.style.opacity = "0.7";
+			const info = containerEl.createDiv({
+				cls: "github-publisher-last-sync",
+			});
 			info.textContent =
 				"Last synchronization: " +
 				new Date(this.plugin.settings.lastSyncDate).toLocaleString();

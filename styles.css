@@ -1,9 +1,9 @@
-.multi-file-suggest-wrapper {
+.github-publisher-multi-file-suggest-wrapper {
 	position: relative;
 	width: 300px;
 }
 
-.multi-file-suggest-selected {
+.github-publisher-multi-file-suggest-selected {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
@@ -12,7 +12,7 @@
 	width: 100%;
 }
 
-.multi-file-chip {
+.github-publisher-multi-file-chip {
 	display: flex;
 	align-items: center;
 	background: var(--background-modifier-active-hover);
@@ -22,7 +22,7 @@
 	margin: 0 4px 4px 0;
 }
 
-.multi-file-chip-label {
+.github-publisher-multi-file-chip-label {
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
@@ -30,19 +30,19 @@
 	white-space: pre;
 }
 
-.multi-file-chip-remove {
+.github-publisher-multi-file-chip-remove {
 	flex: 0 0 auto;
 	margin-left: 6px;
 	cursor: pointer;
 	color: var(--text-accent);
 }
 
-.multi-file-suggest-input {
+.github-publisher-multi-file-suggest-input {
 	width: 100%;
 	margin-bottom: 2px;
 }
 
-.multi-file-suggest-dropdown {
+.github-publisher-multi-file-suggest-dropdown {
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	position: absolute;
@@ -52,10 +52,10 @@
 	width: 100%;
 }
 
-.multi-file-suggest-dropdown,
-.multi-file-suggest-dropdown *,
-.multi-file-suggest-dropdown::before,
-.multi-file-suggest-dropdown::after {
+.github-publisher-multi-file-suggest-dropdown,
+.github-publisher-multi-file-suggest-dropdown *,
+.github-publisher-multi-file-suggest-dropdown::before,
+.github-publisher-multi-file-suggest-dropdown::after {
 	border: none !important;
 	border-top: none !important;
 	border-bottom: none !important;
@@ -64,16 +64,21 @@
 	background: var(--background-secondary) !important;
 }
 
-.multi-file-suggest-option {
+.github-publisher-multi-file-suggest-option {
 	padding: 4px 8px;
 	cursor: pointer;
 }
 
-.multi-file-suggest-option:hover {
+.github-publisher-multi-file-suggest-option:hover {
 	background: var(--background-modifier-hover);
 }
 
-.multi-file-suggest-nores {
+.github-publisher-multi-file-suggest-nores {
 	padding: 4px 8px;
 	color: var(--text-faint);
+}
+
+.github-publisher-last-sync {
+	text-align: right;
+	opacity: 0github-publisher-7;
 }

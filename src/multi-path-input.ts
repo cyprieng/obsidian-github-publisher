@@ -15,31 +15,37 @@ export function addMultiPathInput(
 	onChange: (selected: string[]) => void,
 ) {
 	// Wrapper containing the input and suggestions
-	const wrapper = container.createDiv({ cls: "multi-file-suggest-wrapper" });
+	const wrapper = container.createDiv({
+		cls: "github-publisher-multi-file-suggest-wrapper",
+	});
 
 	// Create all the elements in the desired order
 	const input = wrapper.createEl("input", {
 		type: "text",
-		cls: "multi-file-suggest-input",
+		cls: "github-publisher-multi-file-suggest-input",
 	});
 	input.placeholder = "Start typing a note or folder name...";
 
 	const selectedDiv = wrapper.createDiv({
-		cls: "multi-file-suggest-selected",
+		cls: "github-publisher-multi-file-suggest-selected",
 	});
 	const suggestDiv = wrapper.createDiv({
-		cls: "multi-file-suggest-dropdown",
+		cls: "github-publisher-multi-file-suggest-dropdown",
 	});
 
 	// Show selected paths as chips
 	function renderSelected() {
 		selectedDiv.empty();
 		selected.forEach((path) => {
-			const chip = selectedDiv.createDiv({ cls: "multi-file-chip" });
-			const label = chip.createSpan({ cls: "multi-file-chip-label" });
+			const chip = selectedDiv.createDiv({
+				cls: "github-publisher-multi-file-chip",
+			});
+			const label = chip.createSpan({
+				cls: "github-publisher-multi-file-chip-label",
+			});
 			label.setText(path);
 			const removeBtn = chip.createSpan({
-				cls: "multi-file-chip-remove",
+				cls: "github-publisher-multi-file-chip-remove",
 				text: "✕",
 			});
 			removeBtn.onclick = () => {
@@ -97,7 +103,7 @@ export function addMultiPathInput(
 		let count = 0;
 		for (const path of results) {
 			const opt = suggestDiv.createDiv({
-				cls: "multi-file-suggest-option",
+				cls: "github-publisher-multi-file-suggest-option",
 			});
 			opt.setText(path);
 			opt.onclick = () => {
@@ -111,7 +117,7 @@ export function addMultiPathInput(
 		}
 		if (count === 0) {
 			const noResult = suggestDiv.createDiv({
-				cls: "multi-file-suggest-no-result",
+				cls: "github-publisher-multi-file-suggest-no-result",
 			});
 			noResult.setText("No results");
 		}

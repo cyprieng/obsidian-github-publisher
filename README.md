@@ -56,7 +56,7 @@ Open the plugin settings from `Settings` → `GitHub Publisher`. Configure the f
 ## How It Works
 
 - The plugin collects all selected notes/folders and their contents.
-- It uses the GitHub API to create/update/delete files in your specified repo folder and branch.
+- It uses the GitHub API to create, update, or delete files in your specified repo folder and branch.
 - The remote folder is overwritten to match your selection (additions, updates, deletions).
 - Commits are made with the author `Obsidian GitHub Publisher`.
 
