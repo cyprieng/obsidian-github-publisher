@@ -274,6 +274,14 @@ export default class GitHubPublisherPlugin extends Plugin {
 				message: "Publish Obsidian → GitHub",
 				tree: newTree.data.sha,
 				parents: [latestCommitSha],
+				author: {
+					name: "Obsidian GitHub Publisher",
+					email: "obsidian-bot@cyprien.io",
+				},
+				committer: {
+					name: "Obsidian GitHub Publisher",
+					email: "obsidian-bot@cyprien.io",
+				},
 			});
 			await this.octokit.rest.git.updateRef({
 				owner,
