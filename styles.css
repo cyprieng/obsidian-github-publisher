@@ -1,8 +1,81 @@
-/*
+.multi-file-suggest-wrapper {
+	position: relative;
+	width: 100%;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.multi-file-suggest-selected {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	align-items: center;
+	margin-top: 4px;
+	max-width: 100%;
+}
 
-If your plugin does not need CSS, delete this file.
+.multi-file-chip {
+	display: flex;
+	align-items: center;
+	background: var(--background-modifier-active-hover);
+	border-radius: 6px;
+	padding: 2px 6px;
+	font-size: 90%;
+	max-width: 350px;
+	margin: 0 4px 4px 0;
+}
 
-*/
+.multi-file-chip-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+}
+
+.multi-file-chip-remove {
+	flex: 0 0 auto;
+	margin-left: 6px;
+	cursor: pointer;
+	color: var(--text-accent);
+	font-size: 110%;
+}
+
+.multi-file-suggest-input {
+	width: 100%;
+	margin-bottom: 2px;
+}
+
+.multi-file-suggest-dropdown {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	position: absolute;
+	z-index: 100;
+	max-height: 200px;
+	overflow-y: auto;
+	width: 100%;
+}
+
+.multi-file-suggest-dropdown,
+.multi-file-suggest-dropdown *,
+.multi-file-suggest-dropdown::before,
+.multi-file-suggest-dropdown::after {
+	border: none !important;
+	border-top: none !important;
+	border-bottom: none !important;
+	box-shadow: none !important;
+	outline: none !important;
+	background: var(--background-secondary) !important;
+}
+
+.multi-file-suggest-option {
+	padding: 4px 8px;
+	cursor: pointer;
+}
+
+.multi-file-suggest-option:hover {
+	background: var(--background-modifier-hover);
+}
+
+.multi-file-suggest-nores {
+	padding: 4px 8px;
+	color: var(--text-faint);
+}
