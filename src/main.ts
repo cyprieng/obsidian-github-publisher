@@ -32,6 +32,15 @@ const DEFAULT_SETTINGS: GitHubPublisherSettings = {
 	syncInterval: 60,
 };
 
+// Interface for local files to be published
+interface LocalFile {
+	vaultPath: string; // Path in the Obsidian vault
+	repoPath: string; // Path in the GitHub repository
+	content?: string; // Content of the file as text (if it's a text file)
+	binary?: ArrayBuffer; // Binary content of the file (if it's a binary file)
+	isText: boolean; // Whether the file is a text file or binary
+}
+
 // Parse the GitHub repository URL to extract owner and repo name
 function parseRepoUrl(repoUrl: string) {
 	const m = repoUrl.match(/github\.com[:/](.+?)\/(.+?)(\.git)?$/i);
@@ -156,39 +165,17 @@ export default class GitHubPublisherPlugin extends Plugin {
 			const branch = this.settings.repoBranch;
 			const repoFolder = this.settings.repoFolder.replace(/^\/|\/$/g, "");
 			const pathsToSync = this.settings.selectedPaths;
-			const localFiles: {
-				vaultPath: string;
-				repoPath: string;
-				content: string;
-			}[] = [];
+			const localFiles: LocalFile[] = [];
 
 			// Gather local files (vaultPath: path in vault, repoPath: path in repo)
 			for (const path of pathsToSync) {
-				const fileOrFolder = this.app.vault.getAbstractFileByPath(
-					normalizePath(path),
+				await this.gatherFilesRecursively(
+					this.app,
+					path,
+					repoFolder,
+					localFiles,
+					this.isTextBuffer,
 				);
-				if (fileOrFolder instanceof TFile) {
-					const content = await this.app.vault.read(fileOrFolder);
-					localFiles.push({
-						vaultPath: fileOrFolder.path,
-						repoPath: repoFolder
-							? `${repoFolder}/${fileOrFolder.path}`
-							: fileOrFolder.path,
-						content,
-					});
-				} else if (fileOrFolder instanceof TFolder) {
-					const files = this.getAllFilesInFolder(fileOrFolder);
-					for (const f of files) {
-						const content = await this.app.vault.read(f);
-						localFiles.push({
-							vaultPath: f.path,
-							repoPath: repoFolder
-								? `${repoFolder}/${f.path}`
-								: f.path,
-							content,
-						});
-					}
-				}
 			}
 
 			// Get latest commit and tree
@@ -232,16 +219,47 @@ export default class GitHubPublisherPlugin extends Plugin {
 
 			// Add or update files (if content changed)
 			for (const file of localFiles) {
+				// Remote and local sha to check for changes
 				const remoteSha = remoteFiles.get(file.repoPath);
-				const localSha = await this.gitBlobSha1(file.content);
+				let localSha: string | undefined = undefined;
 
-				if (localSha !== remoteSha) {
-					tree.push({
-						path: file.repoPath,
-						mode: "100644",
-						type: "blob",
-						content: file.content,
-					});
+				if (file.isText && file.content !== undefined) {
+					// Text file
+					localSha = await this.gitBlobSha1(file.content);
+					if (localSha !== remoteSha) {
+						const blob = await this.octokit.rest.git.createBlob({
+							owner,
+							repo,
+							content: file.content,
+							encoding: "utf-8",
+						});
+						tree.push({
+							path: file.repoPath,
+							mode: "100644",
+							type: "blob",
+							sha: blob.data.sha,
+						});
+					}
+				} else if (!file.isText && file.binary !== undefined) {
+					// Binary file
+					localSha = await this.gitBlobSha1(file.binary);
+					if (localSha !== remoteSha) {
+						const base64Content = this.arrayBufferToBase64(
+							file.binary,
+						);
+						const blob = await this.octokit.rest.git.createBlob({
+							owner,
+							repo,
+							content: base64Content,
+							encoding: "base64",
+						});
+						tree.push({
+							path: file.repoPath,
+							mode: "100644",
+							type: "blob",
+							sha: blob.data.sha,
+						});
+					}
 				}
 			}
 
@@ -301,51 +319,139 @@ export default class GitHubPublisherPlugin extends Plugin {
 	}
 
 	/**
-	 * Computes the Git blob SHA-1 hash for the given content string.
+	 * Recursively gathers files from the vault, reading their contents as text or binary.
+	 * This modify the `localFiles` array with metadata and contents of each file.
 	 *
-	 * This method encodes the content as UTF-8, constructs the Git blob header,
-	 * concatenates the header and content, and then computes the SHA-1 hash
-	 * according to the Git object format.
+	 * @param app - The Obsidian App instance.
+	 * @param basePath - The base path in the vault to start gathering files from.
+	 * @param repoFolder - The repository folder path to prepend to each file's path.
+	 * @param localFiles - The array to collect file metadata and contents.
+	 * @param isTextBuffer - Function to determine if a buffer is text or binary.
+	 * @returns {Promise<void>} Resolves when all files have been gathered.
+	 */
+	async gatherFilesRecursively(
+		app: App,
+		basePath: string,
+		repoFolder: string,
+		localFiles: LocalFile[],
+		isTextBuffer: (buffer: ArrayBuffer, sampleSize?: number) => boolean,
+	): Promise<void> {
+		const fileOrFolder = app.vault.getAbstractFileByPath(
+			normalizePath(basePath),
+		);
+		if (!fileOrFolder) return;
+		if (fileOrFolder instanceof TFile) {
+			const binary = await app.vault.readBinary(fileOrFolder);
+			const isText = isTextBuffer(binary);
+			localFiles.push({
+				vaultPath: fileOrFolder.path,
+				repoPath: repoFolder
+					? `${repoFolder}/${fileOrFolder.path}`
+					: fileOrFolder.path,
+				content: isText
+					? new TextDecoder("utf-8").decode(binary)
+					: undefined,
+				binary: !isText ? binary : undefined,
+				isText,
+			});
+		} else if (fileOrFolder instanceof TFolder) {
+			for (const child of fileOrFolder.children) {
+				await this.gatherFilesRecursively(
+					app,
+					child.path,
+					repoFolder,
+					localFiles,
+					isTextBuffer,
+				);
+			}
+		}
+	}
+
+	/**
+	 * Determines if the given ArrayBuffer likely contains text data.
 	 *
-	 * @param content - The content to hash as a Git blob.
+	 * Samples up to `sampleSize` bytes from the buffer and counts the number of non-ASCII bytes.
+	 * If the proportion of non-ASCII bytes is less than 5%, the buffer is considered text.
+	 *
+	 * @param {ArrayBuffer} buffer - The buffer to analyze.
+	 * @param {number} [sampleSize=1024] - The maximum number of bytes to sample from the buffer.
+	 * @returns {boolean} True if the buffer is likely text, false otherwise.
+	 */
+	isTextBuffer(buffer: ArrayBuffer, sampleSize = 1024): boolean {
+		const bytes = new Uint8Array(buffer);
+		const len = Math.min(bytes.length, sampleSize);
+		let nonAscii = 0;
+		for (let i = 0; i < len; i++) {
+			const c = bytes[i];
+			if (
+				c !== 9 &&
+				c !== 10 &&
+				c !== 13 && // not tab, LF, CR
+				!(c >= 32 && c <= 126) && // not printable ASCII
+				!(c >= 128 && c <= 255) // not extended UTF-8
+			) {
+				nonAscii++;
+			}
+		}
+		return nonAscii / len < 0.05;
+	}
+
+	/**
+	 * Converts an ArrayBuffer to a Base64-encoded string.
+	 *
+	 * @param buffer - The ArrayBuffer to convert.
+	 * @returns The Base64-encoded string representation of the buffer.
+	 */
+	arrayBufferToBase64(buffer: ArrayBuffer): string {
+		let binary = "";
+		const bytes = new Uint8Array(buffer);
+		const len = bytes.byteLength;
+		for (let i = 0; i < len; i++) {
+			binary += String.fromCharCode(bytes[i]);
+		}
+		return btoa(binary);
+	}
+
+	/**
+	 * Computes the Git blob SHA-1 hash for the given content.
+	 *
+	 * The function constructs a Git blob object from the input content, prepends the appropriate header,
+	 * and then calculates the SHA-1 hash as used by Git for blob objects.
+	 *
+	 * @param content - The content to hash. Can be a string, ArrayBuffer, or Uint8Array.
 	 * @returns A promise that resolves to the SHA-1 hash as a hexadecimal string.
 	 */
-	async gitBlobSha1(content: string): Promise<string> {
-		// Convert to UTF-8 bytes
-		const encoder = new TextEncoder();
-		const contentBytes = encoder.encode(content);
+	async gitBlobSha1(
+		content: string | ArrayBuffer | Uint8Array,
+	): Promise<string> {
+		let contentBytes: Uint8Array;
+		if (typeof content === "string") {
+			contentBytes = new TextEncoder().encode(content);
+		} else if (content instanceof ArrayBuffer) {
+			contentBytes = new Uint8Array(content);
+		} else {
+			contentBytes = content;
+		}
 		const header = `blob ${contentBytes.length}\0`;
-		const headerBytes = encoder.encode(header);
+		const headerBytes = new TextEncoder().encode(header);
 
-		// Concatenate header + content
 		const blob = new Uint8Array(headerBytes.length + contentBytes.length);
 		blob.set(headerBytes, 0);
 		blob.set(contentBytes, headerBytes.length);
 
-		// SHA1 hash
 		const hashBuffer = await window.crypto.subtle.digest("SHA-1", blob);
 
-		// Convert hash to hex string
 		return Array.from(new Uint8Array(hashBuffer))
 			.map((b) => b.toString(16).padStart(2, "0"))
 			.join("");
 	}
 
 	/**
-	 * Recursively retrieves all files within a given folder and its subfolders.
-	 * @param folder - The folder to search for files.
-	 * @returns An array of TFile objects found within the folder and its subfolders.
+	 * Handles changes to the settings.
+	 *
+	 * Sets up Octokit with the GitHub token from the settings and configures the sync interval.
+	 * This method should be called whenever the settings are updated to ensure the latest configuration is used.
 	 */
-	getAllFilesInFolder(folder: TFolder): TFile[] {
-		let files: TFile[] = [];
-		for (const child of folder.children) {
-			if (child instanceof TFile) files.push(child);
-			else if (child instanceof TFolder)
-				files = files.concat(this.getAllFilesInFolder(child));
-		}
-		return files;
-	}
-
 	async onSettingsChange() {
 		// Set up Octokit with the GitHub token
 		this.octokit = new Octokit({ auth: this.settings.githubToken });
