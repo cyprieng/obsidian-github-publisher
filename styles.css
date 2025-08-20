@@ -1,6 +1,7 @@
 .github-publisher-multi-file-suggest-wrapper {
 	position: relative;
 	width: 300px;
+	max-width: 100%;
 }
 
 .github-publisher-multi-file-suggest-selected {
@@ -40,6 +41,7 @@
 .github-publisher-multi-file-suggest-input {
 	width: 100%;
 	margin-bottom: 2px;
+	box-sizing: border-box;
 }
 
 .github-publisher-multi-file-suggest-dropdown {
@@ -50,6 +52,8 @@
 	max-height: 200px;
 	overflow-y: auto;
 	width: 100%;
+	left: 0;
+	box-sizing: border-box;
 }
 
 .github-publisher-multi-file-suggest-dropdown,
@@ -80,5 +84,27 @@
 
 .github-publisher-last-sync {
 	text-align: right;
-	opacity: 0github-publisher-7;
+	opacity: 0.7;
+}
+
+/* Responsive: Make the component truly full-width on mobile */
+@media (max-width: 600px) {
+	.github-publisher-multi-file-suggest-wrapper {
+		width: 100% !important;
+		max-width: 100% !important;
+		min-width: 0 !important;
+	}
+	.github-publisher-multi-file-suggest-selected {
+		width: 100% !important;
+	}
+	.github-publisher-multi-file-chip {
+		max-width: 100%;
+	}
+	.github-publisher-multi-file-suggest-input {
+		width: 100% !important;
+	}
+	.github-publisher-multi-file-suggest-dropdown {
+		width: 100% !important;
+		left: 0 !important;
+	}
 }
