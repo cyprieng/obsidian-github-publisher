@@ -1,4 +1,4 @@
-import { App, TAbstractFile, TFile, TFolder } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 
 /**
  * Adds a multi-path input component to the specified container, allowing users to select multiple files or folders from the vault.
@@ -31,14 +31,6 @@ export function addMultiPathInput(
 		cls: "multi-file-suggest-dropdown",
 	});
 
-	// List all files and folders in the vault
-	const filesAndFolders = [] as string[];
-	app.vault.getAllLoadedFiles().forEach((f: TAbstractFile) => {
-		if (f.path !== "" && (f instanceof TFile || f instanceof TFolder)) {
-			filesAndFolders.push(f.path);
-		}
-	});
-
 	// Show selected paths as chips
 	function renderSelected() {
 		selectedDiv.empty();
@@ -60,39 +52,73 @@ export function addMultiPathInput(
 	}
 	renderSelected();
 
-	// Suggest paths dynamically based on input
-	input.oninput = () => {
-		suggestDiv.empty();
-		const val = input.value.trim().toLowerCase();
-		if (!val) return;
-		let count = 0;
-		for (const path of filesAndFolders) {
-			if (selected.includes(path)) continue;
-			if (path.toLowerCase().includes(val)) {
-				const opt = suggestDiv.createDiv({
-					cls: "multi-file-suggest-option",
-				});
-				opt.setText(path);
-				opt.onclick = () => {
-					selected.push(path);
-					onChange([...selected]);
-					input.value = "";
-					suggestDiv.empty();
-					renderSelected();
-				};
-				count++;
-				if (count >= 10) break; // Limit to 10 suggestions
+	// Debounce
+	let inputTimeout: number | undefined;
+	function debounce(fn: () => void, delay: number) {
+		if (inputTimeout) window.clearTimeout(inputTimeout);
+		inputTimeout = window.setTimeout(fn, delay);
+	}
+
+	// Search function: Walks the vault only as needed
+	function searchVault(query: string, limit = 10): string[] {
+		const results: string[] = [];
+		const lowerQuery = query.toLowerCase();
+
+		// Early exit if empty
+		if (!lowerQuery) return results;
+
+		function walk(folder: TFolder) {
+			for (const child of folder.children) {
+				if (results.length >= limit) return;
+				const path = child.path;
+				if (
+					(child instanceof TFile || child instanceof TFolder) &&
+					path.toLowerCase().includes(lowerQuery) &&
+					!selected.includes(path)
+				) {
+					results.push(path);
+				}
+				if (child instanceof TFolder) {
+					walk(child);
+				}
 			}
 		}
 
-		// No suggestions found
+		walk(app.vault.getRoot());
+		return results;
+	}
+
+	// Suggest paths dynamically based on input, without pre-scanning the full vault
+	function handleInput() {
+		suggestDiv.empty();
+		const val = input.value.trim().toLowerCase();
+		if (!val) return;
+		const results = searchVault(val, 10);
+		let count = 0;
+		for (const path of results) {
+			const opt = suggestDiv.createDiv({
+				cls: "multi-file-suggest-option",
+			});
+			opt.setText(path);
+			opt.onclick = () => {
+				selected.push(path);
+				onChange([...selected]);
+				input.value = "";
+				suggestDiv.empty();
+				renderSelected();
+			};
+			count++;
+		}
 		if (count === 0) {
 			const nores = suggestDiv.createDiv({
 				cls: "multi-file-suggest-nores",
 			});
 			nores.setText("No results");
 		}
-	};
+	}
+
+	// Debounced input handler
+	input.oninput = () => debounce(handleInput, 100);
 
 	// Handle Enter key to select first suggestion
 	input.onkeydown = (e) => {
