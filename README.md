@@ -1,8 +1,10 @@
 # Obsidian GitHub Publisher
 
-**Obsidian GitHub Publisher** is a plugin for [Obsidian](https://obsidian.md/) that lets you automatically or manually **publish** selected notes and folders from your vault to a folder in a GitHub repository.
+**Obsidian GitHub Publisher** is a plugin for [Obsidian](https://obsidian.md/) that lets you automatically or manually publish selected notes and folders from your vault to a folder in a GitHub repository.
 
 This plugin is ideal for publishing notes for use with a static site generator, or backing up part of your vault to GitHub.
+
+For more details on how you can use it to publish your notes, check here: [easily publish your Obsidian notes through GitHub](https://www.cyprien.io/posts/obsidian-github-publisher/).
 
 ## Features
 
@@ -10,14 +12,13 @@ This plugin is ideal for publishing notes for use with a static site generator, 
 - **Configurable destination:** Publish to any folder in any branch of your repository.
 - **Manual and automatic publishing:** Trigger export manually or on an interval.
 - **Overwrites remote folder:** The target folder in your repository will always match your selected local notes/folders.
-- **No external servers:** All operations happen directly from your device to GitHub.
 
 ## Configuration
 
 Open the plugin settings from `Settings` → `GitHub Publisher`. Configure the following:
 
 - **GitHub Token:**  
-  A [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` (and/or `public_repo`) permissions.
+  A [GitHub Personal Access Token](https://github.com/settings/tokens) with permissions to commit to your repository.
 
 - **Repository URL:**  
   Full URL to your GitHub repository (e.g., `https://github.com/yourusername/yourrepo`).
@@ -42,26 +43,16 @@ Open the plugin settings from `Settings` → `GitHub Publisher`. Configure the f
 - **Automatic Publishing:**  
   If an interval is set, the plugin will periodically export your selected notes/folders.
 
-- **Status:**  
-  The last successful export time is displayed in the settings.
-
 ## Important Behavior
 
 > **One-way export:**  
 > This plugin performs a **one-way publish** from Obsidian to GitHub.  
 > The contents of the selected notes/folders will **overwrite** the target folder in your GitHub repository on each publish.  
 > Any files in the target GitHub folder that are not present locally will be **deleted**.  
-> This is **not a two-way sync**—changes made on GitHub are not imported back into Obsidian.
+> This is **not a two-way sync**, changes made on GitHub are not imported back into Obsidian.
 
 ## How It Works
 
 - The plugin collects all selected notes/folders and their contents.
 - It uses the GitHub API to create, update, or delete files in your specified repo folder and branch.
 - The remote folder is overwritten to match your selection (additions, updates, deletions).
-- Commits are made with the author `Obsidian GitHub Publisher`.
-
-## Security & Privacy
-
-- Your GitHub token is stored locally in your Obsidian vault settings.
-- All publishing operations happen from your device directly to GitHub. No data is sent to third-party servers.
-- **Never share your token or publish your settings file.**
