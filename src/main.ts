@@ -48,6 +48,35 @@ function parseRepoUrl(repoUrl: string) {
 	return { owner: m[1], repo: m[2] };
 }
 
+/**
+ * Determines if the given ArrayBuffer likely contains text data.
+ *
+ * Samples up to `sampleSize` bytes from the buffer and counts the number of non-ASCII bytes.
+ * If the proportion of non-ASCII bytes is less than 5%, the buffer is considered text.
+ *
+ * @param {ArrayBuffer} buffer - The buffer to analyze.
+ * @param {number} [sampleSize=1024] - The maximum number of bytes to sample from the buffer.
+ * @returns {boolean} True if the buffer is likely text, false otherwise.
+ */
+function isTextBuffer(buffer: ArrayBuffer, sampleSize = 1024): boolean {
+	const bytes = new Uint8Array(buffer);
+	const len = Math.min(bytes.length, sampleSize);
+	let nonAscii = 0;
+	for (let i = 0; i < len; i++) {
+		const c = bytes[i];
+		if (
+			c !== 9 &&
+			c !== 10 &&
+			c !== 13 && // not tab, LF, CR
+			!(c >= 32 && c <= 126) && // not printable ASCII
+			!(c >= 128 && c <= 255) // not extended UTF-8
+		) {
+			nonAscii++;
+		}
+	}
+	return nonAscii / len < 0.05;
+}
+
 // Main plugin class
 export default class GitHubPublisherPlugin extends Plugin {
 	settings: GitHubPublisherSettings; // Plugin settings
@@ -74,7 +103,9 @@ export default class GitHubPublisherPlugin extends Plugin {
 		this.addCommand({
 			id: "publish-now",
 			name: "Publish to GitHub now",
-			callback: () => this.publishToGitHub(),
+			callback: () => {
+				void this.publishToGitHub();
+			},
 		});
 	}
 
@@ -118,7 +149,9 @@ export default class GitHubPublisherPlugin extends Plugin {
 		// Set up a new interval to sync to GitHub
 		this.syncIntervalId = this.registerInterval(
 			window.setInterval(
-				() => this.publishToGitHub(),
+				() => {
+					void this.publishToGitHub();
+				},
 				this.settings.syncInterval * 60 * 1000,
 			),
 		);
@@ -156,7 +189,7 @@ export default class GitHubPublisherPlugin extends Plugin {
 				!this.settings.repoUrl ||
 				!this.settings.repoBranch
 			) {
-				new Notice("GitHub Publisher: invalid settings");
+				new Notice("GitHub publisher: invalid settings");
 				return;
 			}
 
@@ -174,7 +207,6 @@ export default class GitHubPublisherPlugin extends Plugin {
 					path,
 					repoFolder,
 					localFiles,
-					this.isTextBuffer,
 				);
 			}
 
@@ -314,7 +346,10 @@ export default class GitHubPublisherPlugin extends Plugin {
 			await this.updateLastSyncDate();
 		} catch (e) {
 			console.error("GitHub Publisher: error during publish", e);
-			new Notice("GitHub Publisher: error during publish : " + e.message);
+			const errorMessage = e instanceof Error ? e.message : String(e);
+			new Notice(
+				"GitHub Publisher: error during publish : " + errorMessage,
+			);
 		}
 	}
 
@@ -326,7 +361,6 @@ export default class GitHubPublisherPlugin extends Plugin {
 	 * @param basePath - The base path in the vault to start gathering files from.
 	 * @param repoFolder - The repository folder path to prepend to each file's path.
 	 * @param localFiles - The array to collect file metadata and contents.
-	 * @param isTextBuffer - Function to determine if a buffer is text or binary.
 	 * @returns {Promise<void>} Resolves when all files have been gathered.
 	 */
 	async gatherFilesRecursively(
@@ -334,7 +368,6 @@ export default class GitHubPublisherPlugin extends Plugin {
 		basePath: string,
 		repoFolder: string,
 		localFiles: LocalFile[],
-		isTextBuffer: (buffer: ArrayBuffer, sampleSize?: number) => boolean,
 	): Promise<void> {
 		const fileOrFolder = app.vault.getAbstractFileByPath(
 			normalizePath(basePath),
@@ -361,39 +394,9 @@ export default class GitHubPublisherPlugin extends Plugin {
 					child.path,
 					repoFolder,
 					localFiles,
-					isTextBuffer,
 				);
 			}
 		}
-	}
-
-	/**
-	 * Determines if the given ArrayBuffer likely contains text data.
-	 *
-	 * Samples up to `sampleSize` bytes from the buffer and counts the number of non-ASCII bytes.
-	 * If the proportion of non-ASCII bytes is less than 5%, the buffer is considered text.
-	 *
-	 * @param {ArrayBuffer} buffer - The buffer to analyze.
-	 * @param {number} [sampleSize=1024] - The maximum number of bytes to sample from the buffer.
-	 * @returns {boolean} True if the buffer is likely text, false otherwise.
-	 */
-	isTextBuffer(buffer: ArrayBuffer, sampleSize = 1024): boolean {
-		const bytes = new Uint8Array(buffer);
-		const len = Math.min(bytes.length, sampleSize);
-		let nonAscii = 0;
-		for (let i = 0; i < len; i++) {
-			const c = bytes[i];
-			if (
-				c !== 9 &&
-				c !== 10 &&
-				c !== 13 && // not tab, LF, CR
-				!(c >= 32 && c <= 126) && // not printable ASCII
-				!(c >= 128 && c <= 255) // not extended UTF-8
-			) {
-				nonAscii++;
-			}
-		}
-		return nonAscii / len < 0.05;
 	}
 
 	/**
@@ -452,7 +455,7 @@ export default class GitHubPublisherPlugin extends Plugin {
 	 * Sets up Octokit with the GitHub token from the settings and configures the sync interval.
 	 * This method should be called whenever the settings are updated to ensure the latest configuration is used.
 	 */
-	async onSettingsChange() {
+	onSettingsChange() {
 		// Set up Octokit with the GitHub token
 		this.octokit = new Octokit({ auth: this.settings.githubToken });
 
@@ -472,11 +475,11 @@ export default class GitHubPublisherPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData(),
+			(await this.loadData()) as Partial<GitHubPublisherSettings>,
 		);
 
 		// Trigger the settings change handler
-		await this.onSettingsChange();
+		this.onSettingsChange();
 	}
 
 	/**
@@ -490,7 +493,7 @@ export default class GitHubPublisherPlugin extends Plugin {
 		await this.saveData(this.settings);
 
 		// Trigger the settings change handler
-		await this.onSettingsChange();
+		this.onSettingsChange();
 
 		// Refresh the settings tab if it is active (to have the date updated)
 		if (this.settingTab && this.settingTab.active) {
@@ -587,9 +590,9 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 					setting.controlEl,
 					this.app,
 					this.plugin.settings.selectedPaths,
-					async (selected) => {
+					(selected) => {
 						this.plugin.settings.selectedPaths = selected;
-						await this.plugin.saveSettings();
+						void this.plugin.saveSettings();
 					},
 				);
 				return setting;
