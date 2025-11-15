@@ -1,4 +1,4 @@
-import { App, TFile, TFolder } from "obsidian";
+import { App, debounce, TFile, TFolder } from "obsidian";
 
 /**
  * Adds a multi-path input component to the specified container, allowing users to select multiple files or folders from the vault.
@@ -57,13 +57,6 @@ export function addMultiPathInput(
 		});
 	}
 	renderSelected();
-
-	// Debounce
-	let inputTimeout: number | undefined;
-	function debounce(fn: () => void, delay: number) {
-		if (inputTimeout) window.clearTimeout(inputTimeout);
-		inputTimeout = window.setTimeout(fn, delay);
-	}
 
 	// Search function: Walks the vault only as needed
 	function searchVault(query: string, limit = 10): string[] {
@@ -124,7 +117,7 @@ export function addMultiPathInput(
 	}
 
 	// Debounced input handler
-	input.oninput = () => debounce(handleInput, 100);
+	input.oninput = debounce(handleInput, 200, true);
 
 	// Handle Enter key to select first suggestion
 	input.onkeydown = (e) => {
