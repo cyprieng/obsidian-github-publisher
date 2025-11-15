@@ -1,6 +1,6 @@
-# Obsidian GitHub Publisher
+# GitHub Publisher for Obsidian
 
-**Obsidian GitHub Publisher** is a plugin for [Obsidian](https://obsidian.md/) that lets you automatically or manually publish selected notes and folders from your vault to a folder in a GitHub repository.
+**GitHub Publisher** is a plugin for [Obsidian](https://obsidian.md/) that lets you automatically or manually publish selected notes and folders from your vault to a folder in a GitHub repository.
 
 This plugin is ideal for publishing notes for use with a static site generator, or backing up part of your vault to GitHub.
 
