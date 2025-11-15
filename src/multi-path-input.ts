@@ -128,5 +128,5 @@ export function addMultiPathInput(
 	};
 
 	// Close suggestions when clicking outside or on blur
-	input.onblur = () => setTimeout(() => suggestDiv.empty(), 150);
+	input.onblur = () => window.setTimeout(() => suggestDiv.empty(), 150);
 }
