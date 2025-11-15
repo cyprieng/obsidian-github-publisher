@@ -44,7 +44,7 @@ interface LocalFile {
 // Parse the GitHub repository URL to extract owner and repo name
 function parseRepoUrl(repoUrl: string) {
 	const m = repoUrl.match(/github\.com[:/](.+?)\/(.+?)(\.git)?$/i);
-	if (!m) throw new Error("URL de repo GitHub invalide");
+	if (!m) throw new Error("Invalid GitHub repository URL");
 	return { owner: m[1], repo: m[2] };
 }
 
