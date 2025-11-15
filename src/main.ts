@@ -164,6 +164,10 @@ export default class GitHubPublisherPlugin extends Plugin {
 	async updateLastSyncDate() {
 		this.settings.lastSyncDate = new Date().toISOString();
 		await this.saveSettings();
+
+		if (this.settingTab && this.settingTab.active) {
+			this.settingTab.display();
+		}
 	}
 
 	/**
@@ -494,11 +498,6 @@ export default class GitHubPublisherPlugin extends Plugin {
 
 		// Trigger the settings change handler
 		this.onSettingsChange();
-
-		// Refresh the settings tab if it is active (to have the date updated)
-		if (this.settingTab && this.settingTab.active) {
-			this.settingTab.display();
-		}
 	}
 }
 
