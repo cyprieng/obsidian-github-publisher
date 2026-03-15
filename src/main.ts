@@ -546,6 +546,19 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 					}),
 			);
 
+		// GitHub branch input
+		new Setting(containerEl)
+			.setName("Branch name")
+			.setDesc("Ex: main")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.repoBranch)
+					.onChange(async (value) => {
+						this.plugin.settings.repoBranch = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
 		// Target folder in the repository input
 		new Setting(containerEl)
 			.setName("Target folder in the repo")
