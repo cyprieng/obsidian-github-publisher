@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-github-publisher",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"description": "Push selected notes and folders from Obsidian directly to a GitHub repository.",
 	"main": "main.js",
 	"scripts": {
