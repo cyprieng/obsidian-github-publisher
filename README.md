@@ -27,7 +27,7 @@ This plugin is not yet available in the official Obsidian Community Plugins list
 
 ## Features
 
-- **Selective publishing:** Choose specific notes and folders to export.
+- **Selective publishing:** Choose specific notes and folders to export, or use tags to automatically select files.
 - **Configurable destination:** Publish to any folder in any branch of your repository.
 - **Manual and automatic publishing:** Trigger export manually or on an interval.
 - **Overwrites remote folder:** The target folder in your repository will always match your selected local notes/folders.
@@ -48,7 +48,10 @@ Open the plugin settings from `Settings` → `GitHub Publisher`. Configure the f
 - **Branch:**  
   The branch to push changes to (default: `main`).
 
-- **Notes/folders to export:**  
+- **Publish files with given tags:**
+  Tags that mark files for publishing (e.g., `#publish`, `#note`). Any file containing at least one of these tags (in frontmatter or inline) will be published.
+
+- **Notes/folders to export:**
   The notes or folders you want to push to your repo.
 
 - **Publish interval (min):**  
