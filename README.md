@@ -6,6 +6,25 @@ This plugin is ideal for publishing notes for use with a static site generator, 
 
 For more details on how you can use it to publish your notes, check here: [easily publish your Obsidian notes through GitHub](https://www.cyprien.io/posts/obsidian-github-publisher/).
 
+## Installation
+
+This plugin is not yet available in the official Obsidian Community Plugins list. You can install it using one of the methods below.
+
+### Using BRAT (recommended)
+
+1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from **Settings > Community Plugins > Browse**.
+2. Go to **Settings > Community Plugins > BRAT > Add Beta Plugin**.
+3. Paste the repository URL: `https://github.com/cyprieng/obsidian-github-publisher`.
+4. Click **Add Plugin**, then enable **GitHub Publisher** in your Community Plugins list.
+
+### Manual installation
+
+1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/cyprieng/obsidian-github-publisher/releases).
+2. Create the folder `<your-vault>/.obsidian/plugins/github-publisher/`.
+3. Copy the downloaded files into that folder.
+4. Restart Obsidian (or reload plugins).
+5. Enable **GitHub Publisher** in **Settings > Community Plugins**.
+
 ## Features
 
 - **Selective publishing:** Choose specific notes and folders to export.
