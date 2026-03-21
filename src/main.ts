@@ -1,4 +1,5 @@
 import { addMultiPathInput } from "./multi-path-input";
+import { addMultiTagInput } from "./multi-tag-input";
 import {
 	Plugin,
 	PluginSettingTab,
@@ -19,6 +20,7 @@ interface GitHubPublisherSettings {
 	repoFolder: string; // Relative path in the repo where notes will be placed
 	repoBranch: string; // Branch to push changes to
 	selectedPaths: string[]; // List of paths to sync (files or folders in the vault)
+	publishTags: string[]; // Tags that mark files for publishing (e.g. ["#note", "#publish"])
 	syncInterval: number; // Sync interval in minutes
 	lastSyncDate?: string; // Last sync date in ISO format
 }
@@ -30,6 +32,7 @@ const DEFAULT_SETTINGS: GitHubPublisherSettings = {
 	repoFolder: "",
 	repoBranch: "main",
 	selectedPaths: [],
+	publishTags: [],
 	syncInterval: 60,
 };
 
@@ -215,6 +218,16 @@ export default class GitHubPublisherPlugin extends Plugin {
 				);
 			}
 
+			// Gather files matching publish tags
+			if (this.settings.publishTags.length > 0) {
+				await this.gatherFilesByTags(
+					this.app,
+					this.settings.publishTags,
+					repoFolder,
+					localFiles,
+				);
+			}
+
 			// Get latest commit and tree
 			const ref = await this.octokit.rest.git.getRef({
 				owner,
@@ -357,6 +370,34 @@ export default class GitHubPublisherPlugin extends Plugin {
 	}
 
 	/**
+	 * Reads a file from the vault and appends it to the local files array.
+	 * Detects whether the file is text or binary and stores the appropriate content.
+	 *
+	 * @param app - The Obsidian App instance.
+	 * @param file - The vault file to read.
+	 * @param repoFolder - The repository folder path to prepend to the file's path.
+	 * @param localFiles - The array to append the file metadata and contents to.
+	 */
+	private async readAndPushFile(
+		app: App,
+		file: TFile,
+		repoFolder: string,
+		localFiles: LocalFile[],
+	): Promise<void> {
+		const binary = await app.vault.readBinary(file);
+		const isText = isTextBuffer(binary);
+		localFiles.push({
+			vaultPath: file.path,
+			repoPath: repoFolder ? `${repoFolder}/${file.path}` : file.path,
+			content: isText
+				? new TextDecoder("utf-8").decode(binary)
+				: undefined,
+			binary: !isText ? binary : undefined,
+			isText,
+		});
+	}
+
+	/**
 	 * Recursively gathers files from the vault, reading their contents as text or binary.
 	 * This modify the `localFiles` array with metadata and contents of each file.
 	 *
@@ -377,19 +418,12 @@ export default class GitHubPublisherPlugin extends Plugin {
 		);
 		if (!fileOrFolder) return;
 		if (fileOrFolder instanceof TFile) {
-			const binary = await app.vault.readBinary(fileOrFolder);
-			const isText = isTextBuffer(binary);
-			localFiles.push({
-				vaultPath: fileOrFolder.path,
-				repoPath: repoFolder
-					? `${repoFolder}/${fileOrFolder.path}`
-					: fileOrFolder.path,
-				content: isText
-					? new TextDecoder("utf-8").decode(binary)
-					: undefined,
-				binary: !isText ? binary : undefined,
-				isText,
-			});
+			await this.readAndPushFile(
+				app,
+				fileOrFolder,
+				repoFolder,
+				localFiles,
+			);
 		} else if (fileOrFolder instanceof TFolder) {
 			for (const child of fileOrFolder.children) {
 				await this.gatherFilesRecursively(
@@ -399,6 +433,57 @@ export default class GitHubPublisherPlugin extends Plugin {
 					localFiles,
 				);
 			}
+		}
+	}
+
+	/**
+	 * Gathers files from the vault that contain any of the specified tags.
+	 * Uses Obsidian's MetadataCache to check both frontmatter and inline tags.
+	 * Skips files already present in localFiles to avoid duplicates.
+	 */
+	async gatherFilesByTags(
+		app: App,
+		tags: string[],
+		repoFolder: string,
+		localFiles: LocalFile[],
+	): Promise<void> {
+		const alreadyGathered = new Set(localFiles.map((f) => f.vaultPath));
+		const tagSet = new Set(tags.map((t) => t.toLowerCase()));
+
+		for (const file of app.vault.getMarkdownFiles()) {
+			if (alreadyGathered.has(file.path)) continue;
+
+			const cache = app.metadataCache.getFileCache(file);
+			if (!cache) continue;
+
+			let matched = false;
+
+			// Check inline tags (cache.tags[].tag includes # prefix)
+			if (cache.tags) {
+				for (const t of cache.tags) {
+					if (tagSet.has(t.tag.toLowerCase())) {
+						matched = true;
+						break;
+					}
+				}
+			}
+
+			// Check frontmatter tags (string[] without # prefix)
+			if (!matched && cache.frontmatter?.tags) {
+				const fmTags: string[] = Array.isArray(cache.frontmatter.tags)
+					? (cache.frontmatter.tags as string[])
+					: [cache.frontmatter.tags as string];
+				for (const t of fmTags) {
+					if (tagSet.has("#" + String(t).toLowerCase())) {
+						matched = true;
+						break;
+					}
+				}
+			}
+
+			if (!matched) continue;
+
+			await this.readAndPushFile(app, file, repoFolder, localFiles);
 		}
 	}
 
@@ -573,6 +658,24 @@ class GitHubPublisherSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		// Publish tags
+		new Setting(containerEl)
+			.setName("Publish files with given tags")
+			.setDesc(
+				"Publish all files containing any of these tags (press enter to add tag).",
+			)
+			.then((setting) => {
+				addMultiTagInput(
+					setting.controlEl,
+					this.plugin.settings.publishTags,
+					(selected) => {
+						this.plugin.settings.publishTags = selected;
+						void this.plugin.saveSettings();
+					},
+				);
+				return setting;
+			});
 
 		// Files/folders to publish from the vault
 		new Setting(containerEl)
