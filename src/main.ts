@@ -53,32 +53,25 @@ function parseRepoUrl(repoUrl: string) {
 }
 
 /**
- * Determines if the given ArrayBuffer likely contains text data.
+ * Determines if the given ArrayBuffer contains text data, using the same heuristic as git.
  *
- * Samples up to `sampleSize` bytes from the buffer and counts the number of non-ASCII bytes.
- * If the proportion of non-ASCII bytes is less than 5%, the buffer is considered text.
+ * Scans the first 8000 bytes for a null byte (binary indicator), then attempts strict UTF-8
+ * decoding. Returns false if a null byte is found or if the bytes are not valid UTF-8.
  *
- * @param {ArrayBuffer} buffer - The buffer to analyze.
- * @param {number} [sampleSize=1024] - The maximum number of bytes to sample from the buffer.
- * @returns {boolean} True if the buffer is likely text, false otherwise.
+ * @param buffer - The buffer to analyze.
+ * @returns True if the buffer is text, false if binary.
  */
-function isTextBuffer(buffer: ArrayBuffer, sampleSize = 1024): boolean {
-	const bytes = new Uint8Array(buffer);
-	const len = Math.min(bytes.length, sampleSize);
-	let nonAscii = 0;
-	for (let i = 0; i < len; i++) {
-		const c = bytes[i];
-		if (
-			c !== 9 &&
-			c !== 10 &&
-			c !== 13 && // not tab, LF, CR
-			!(c >= 32 && c <= 126) && // not printable ASCII
-			!(c >= 128 && c <= 255) // not extended UTF-8
-		) {
-			nonAscii++;
-		}
+function isTextBuffer(buffer: ArrayBuffer): boolean {
+	const sample = new Uint8Array(
+		buffer.byteLength <= 8000 ? buffer : buffer.slice(0, 8000),
+	);
+	if (sample.includes(0)) return false;
+	try {
+		new TextDecoder("utf-8", { fatal: true }).decode(sample);
+		return true;
+	} catch {
+		return false;
 	}
-	return nonAscii / len < 0.05;
 }
 
 // Main plugin class
